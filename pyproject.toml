@@ -1,0 +1,39 @@
+[tool.tox]
+legacy_tox_ini = """
+
+[testenv]
+skipsdist = true
+skip_install = true
+
+[base]
+deps =
+    openai
+    pydantic[dotenv]
+    srt
+    tiktoken
+
+[testenv:cli]
+passenv =
+    API_KEY
+setenv =
+    ROOT_DIR = {toxinidir}
+deps =
+    {[base]deps}
+commands =
+    python -m srt_gpt {posargs}
+
+[testenv:check_format]
+deps =
+    black
+commands =
+    black {toxinidir} --check --color {posargs}
+
+[testenv:format]
+deps =
+    black
+commands =
+    black {toxinidir} {posargs}
+"""
+
+[tool.black]
+line-length = 160
