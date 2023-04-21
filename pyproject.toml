@@ -22,6 +22,12 @@ deps =
 commands =
     python -m srt_gpt {posargs}
 
+[testenv:opencc]
+deps =
+    opencc-python-reimplemented
+commands =
+    python -m opencc {posargs}
+
 [testenv:check_format]
 deps =
     black

@@ -92,31 +92,50 @@ class Utils:
         return None
 
 
-class MessageTemplate:
-    def __init__(self, target_language: str):
-        self.instructions = (
-            "You are a program responsible for translating subtitles. "
-            "Your task is to output the specified target language based on the input text. "
-            # "Please do not create the following subtitles on your own. "
-            "Please do not output any text other than the translation. "
-            "You will receive the subtitles as python dict format. Each dict value is a subtitle. Please translate then output in the same format. "
-            "You must not change the key, merge or split any value of the dict. "
-            # "Please transliterate the person's name into the local language. "
-            f"Target language: {target_language}"
-        )
+class Message:
+    instructions = (
+        "Your task is to translate subtitle from given input to the specified target language. "
+        "Please do not output any text other than the translation. "
+        "You will receive the subtitles in python dict format. Each dict item maps subtitle index to subtitle content. Please translate each subtitle content and output in same format. "
+        "Between each subtitle item, there is an extra item act as a delimiter (with value='{delimiter}'). You must not mix subtitle content separated by this delimiter item. "
+        # "Please transliterate the person's name into the local language. "
+        "Target language: {target_language}"
+    )
 
-    def get(self, subtitles: list[srt.Subtitle]):
+    delimiter = "__DELIMITER__"
+
+    @classmethod
+    def format(cls, target_language: str, subtitles: list[srt.Subtitle]):
+        content_data = {}
+
+        for subtitle in subtitles:
+            content_data[subtitle.index] = subtitle.content
+            content_data[f"{subtitle.index}d"] = cls.delimiter
+
         messages = [
             {
                 "role": "system",
-                "content": self.instructions,
+                "content": cls.instructions.format(target_language=target_language, delimiter=cls.delimiter),
             },
             {
                 "role": "user",
-                "content": str({subtitle.index: subtitle.content for subtitle in subtitles}),
+                "content": str(content_data),
             },
         ]
+
         return messages
+
+    @classmethod
+    def parse(cls, response_text: str):
+        try:
+            translated_subtitles = dict(eval(response_text))
+        except Exception as e:
+            logging.error(f"Unexpected response format: {e}")
+            return None
+
+        translated_subtitles = {k: v for k, v in translated_subtitles.items() if type(k) is int}
+
+        return translated_subtitles
 
 
 class TranslationApp:
@@ -127,28 +146,26 @@ class TranslationApp:
     def estimate_max_request_index(self, target_language: str, subtitles: list[srt.Subtitle], start_i: int, end_i: int):
         max_tokens = 2000  # actual max is 4096, reserve half for response
 
-        message_template = MessageTemplate(target_language)
         max_i = min(start_i + 99, end_i)
 
-        while Tokenizer.count_messages_token(message_template.get(subtitles[start_i : max_i + 1]), self.settings.model) < max_tokens:
+        while Tokenizer.count_messages_token(Message.format(target_language, subtitles[start_i : max_i + 1]), self.settings.model) < max_tokens:
             if max_i == end_i:
                 break
             max_i += 1
 
-        while Tokenizer.count_messages_token(message_template.get(subtitles[start_i : max_i + 1]), self.settings.model) > max_tokens:
+        while Tokenizer.count_messages_token(Message.format(target_language, subtitles[start_i : max_i + 1]), self.settings.model) > max_tokens:
             if max_i == start_i:
                 break
             max_i -= 1
 
-        tokens = Tokenizer.count_messages_token(message_template.get(subtitles[start_i : max_i + 1]), self.settings.model)
+        tokens = Tokenizer.count_messages_token(Message.format(target_language, subtitles[start_i : max_i + 1]), self.settings.model)
 
         return max_i, tokens
 
     async def request_translation(self, target_language: str, subtitles: list[srt.Subtitle]) -> tuple[dict, bool]:
         self.request_count += 1
 
-        message_template = MessageTemplate(target_language)
-        messages = message_template.get(subtitles)
+        messages = Message.format(target_language, subtitles)
         completion = None
         translated_subtitles = None
 
@@ -163,14 +180,13 @@ class TranslationApp:
                 logging.info("Retry in 20s...")
                 await asyncio.sleep(20)  # TODO: compute wait time
 
-        try:
-            translated_subtitles = dict(eval(completion.choices[0].message.content))
-        except Exception as e:
-            logging.error(f"Unexpected translation format: {e}")
+        translated_subtitles = Message.parse(completion.choices[0].message.content)
+
+        if translated_subtitles is None:
             return None, False
 
         if len(translated_subtitles) != len(subtitles):
-            logging.warn(f"Unexpected number of translated subtitles (expected {len(subtitles)}, get {len(translated_subtitles)}")
+            logging.warn(f"Unexpected number of translated subtitles (expected {len(subtitles)}, get {len(translated_subtitles)})")
             return translated_subtitles, False
 
         logging.info(f"Translation result {translated_subtitles}")
