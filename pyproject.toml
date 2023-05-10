@@ -7,20 +7,17 @@ skip_install = true
 
 [base]
 deps =
-    openai
     pydantic[dotenv]
+    requests
     srt
-    tiktoken
 
 [testenv:cli]
-passenv =
-    API_KEY
 setenv =
     ROOT_DIR = {toxinidir}
 deps =
     {[base]deps}
 commands =
-    python -m srt_gpt {posargs}
+    python -m srt_translator {posargs}
 
 [testenv:opencc]
 deps =
@@ -32,7 +29,7 @@ commands =
 deps =
     black
 commands =
-    black {toxinidir} --check --color {posargs}
+    black {toxinidir} --check --diff --color {posargs}
 
 [testenv:format]
 deps =
