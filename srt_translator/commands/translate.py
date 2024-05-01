@@ -13,8 +13,8 @@ from ..utils.types import CommandInputs
 class Inputs(CommandInputs):
     input_file: FilePath
     output_file: Path
-    input_language: str = Field("yue", alias="in_lang")
-    output_language: str = Field("zh-Hant", alias="out_lang")
+    input_language: str = Field("yue", alias="ilang")
+    output_language: str = Field("zh-Hant", alias="olang")
 
 
 class Command:
