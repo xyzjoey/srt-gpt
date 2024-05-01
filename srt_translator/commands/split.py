@@ -12,7 +12,9 @@ class Inputs(CommandInputs):
 
 
 class Command:
-    description = "Split english and non-english subtitles of a .srt file and save them to '<input_file_name>.en.srt' and '<input_file_name>.other.srt' respectively"
+    description = (
+        "Split ascii and non-ascii subtitles of a .srt file and save them to '<input_file_name>.en.srt' and '<input_file_name>.other.srt' respectively"
+    )
 
     def start(self):
         inputs = Inputs.parse_from_args()

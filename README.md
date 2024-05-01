@@ -9,7 +9,7 @@ pip install tox
 
 2. Put your Azure resource information in `.env` ([How to create Azure Translator resource](https://learn.microsoft.com/en-us/azure/cognitive-services/translator/quickstart-translator#prerequisites))
 ```ini
-TRANSLATION_KEY="<your-azure-translator-key>"
+TRANSLATOR_KEY="<your-azure-translator-key>"
 LOCATION="<your-azure-translator-location>"
 ```
 
@@ -23,7 +23,7 @@ usage: srt_translator [-h] {translate,split} ...
 positional arguments:
   {translate,split}
     translate        Translate a .srt file. See available languages in https://learn.microsoft.com/en-us/azure/cognitive-services/translator/language-support#translation
-    split            Split english and non-english subtitles of a .srt file and save them to '<input_file_name>.en.srt' and '<input_file_name>.other.srt' respectively   
+    split            Split ascii and non-ascii subtitles of a .srt file and save them to '<input_file_name>.en.srt' and '<input_file_name>.other.srt' respectively   
 
 options:
   -h, --help         show this help message and exit
@@ -44,9 +44,9 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  --input_language INPUT_LANGUAGE, --in_lang INPUT_LANGUAGE
+  --input_language INPUT_LANGUAGE, --ilang INPUT_LANGUAGE
                         default=yue
-  --output_language OUTPUT_LANGUAGE, --out_lang OUTPUT_LANGUAGE
+  --output_language OUTPUT_LANGUAGE, --olang OUTPUT_LANGUAGE
                         default=zh-Hant
   cli: OK (0.30=setup[0.06]+cmd[0.23] seconds)
   congratulations :) (0.38 seconds)
