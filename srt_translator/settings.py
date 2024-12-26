@@ -1,8 +1,18 @@
-from pydantic import BaseSettings, DirectoryPath, HttpUrl
+from pathlib import Path
+
+from pydantic import BaseSettings, DirectoryPath, HttpUrl, validator
 
 
 class ProjectSettings(BaseSettings):
     root_dir: DirectoryPath
+    dictionary_path: Path = None
+
+    @validator("dictionary_path", always=True)
+    def set_default_dictionary_path(cls, value, values):
+        if not value:
+            return values["root_dir"] / "dictionary.json"
+
+        return value
 
 
 class AzureSettings(BaseSettings):

@@ -7,7 +7,7 @@ skip_install = true
 
 [base]
 deps =
-    pydantic[dotenv]
+    pydantic[dotenv]<2.0
     requests
     srt
 
