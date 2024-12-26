@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import logging
 import uuid
 
@@ -6,7 +7,7 @@ from pydantic import Field, FilePath
 import srt
 import requests
 
-from ..settings import AzureSettings
+from ..settings import ProjectSettings, AzureSettings
 from ..utils.types import CommandInputs
 
 
@@ -22,7 +23,9 @@ class Command:
         "Translate a .srt file. See available languages in https://learn.microsoft.com/en-us/azure/cognitive-services/translator/language-support#translation"
     )
 
-    def start(self, inputs: Inputs, azure_settings: AzureSettings):
+    def start(self, inputs: Inputs, project_settings: ProjectSettings, azure_settings: AzureSettings):
+        dictionary = self._build_dictionary(project_settings.dictionary_path, inputs.output_language)
+
         url = f"{azure_settings.translator_url}/translate"
 
         headers = {
@@ -52,7 +55,7 @@ class Command:
         while i < len(subtitles):
             j = min(i + interval, len(subtitles))
 
-            body = [{"text": subtitle.content} for subtitle in subtitles[i:j]]
+            body = [{"text": self._inject_dictionary(subtitle.content, dictionary)} for subtitle in subtitles[i:j]]
             response = requests.post(url, params=params, headers=headers, json=body)
             response_json = response.json()
 
@@ -71,3 +74,26 @@ class Command:
             i += interval
 
         logging.info(f"Successfully saved translated subtitles to '{inputs.output_file}'!")
+
+    def _build_dictionary(self, dictionary_path, target_language):
+        dictionary = {}
+
+        if dictionary_path.is_file():
+            with open(dictionary_path, encoding="utf-8") as f:
+                full_dictionary = json.load(f)
+
+                for phrase, v in full_dictionary.items():
+                    translated_phrase = v.get(target_language)
+
+                    if translated_phrase:
+                        dictionary[phrase] = f'<mstrans:dictionary translation="{translated_phrase}">{phrase}</mstrans:dictionary>'
+
+        return dictionary
+
+    def _inject_dictionary(self, text, dictionary):
+        new_text = text
+
+        for phrase, phrase_with_dictionary in dictionary.items():
+            new_text = new_text.replace(phrase, phrase_with_dictionary)
+
+        return new_text
